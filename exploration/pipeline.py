@@ -15,7 +15,7 @@ from exploration.Modules.FeatureSelectorClass import FeatureSelector
 from exploration.config import param_grid
 
 
-PATH_TO_PROJECT = Path(os.getcwd()).parent
+PATH_TO_PROJECT = Path(__file__).parents[1]
 PATH_TO_TRAIN_DATA = PATH_TO_PROJECT.joinpath('data/raw_data/train.csv')
 PATH_TO_TEST_DATA = PATH_TO_PROJECT.joinpath('data/raw_data/test.csv')
 PATH_TO_ARTEFACTS = PATH_TO_PROJECT.joinpath('exploration/artefacts')
@@ -53,15 +53,16 @@ if TRAIN_FEATURES_FILE not in os.listdir(PATH_TO_PREPARED_DATA) \
     feature_selector.fit(train_data)
     features_train = feature_selector.transform(train_data)
     features_test = feature_selector.transform(test_data)
+    target_train = train_data['target']
     print('отбор признаков завершен')
 
     # сохранение гововых файлов
-    target_train = train_data['target']
     features_train.to_pickle(f'{PATH_TO_PREPARED_DATA}/{TRAIN_FEATURES_FILE}')
     features_test.to_pickle(f'{PATH_TO_PREPARED_DATA}/{TEST_FEATURES_FILE}')
     target_train.to_pickle(f'{PATH_TO_PREPARED_DATA}/{TRAIN_TARGET_FILE}')
     print(f'подготовленные файлы сохранены в {PATH_TO_PREPARED_DATA}')
 else:
+    # загрузка подготовленных файлов
     features_train = pd.read_pickle(f'{PATH_TO_PREPARED_DATA}/{TRAIN_FEATURES_FILE}')
     features_test = pd.read_pickle(f'{PATH_TO_PREPARED_DATA}/{TEST_FEATURES_FILE}')
     target_train = pd.read_pickle(f'{PATH_TO_PREPARED_DATA}/{TRAIN_TARGET_FILE}')
@@ -80,22 +81,19 @@ if MODEL_FILE not in os.listdir(PATH_TO_ARTEFACTS):
     grid.fit(features_train, target_train)
     best_model = grid.best_estimator_
     print(f'результат обучения модели ROC_AUC - {grid.best_score_}')
+    # сохранение модели
     joblib.dump(best_model, f'{PATH_TO_ARTEFACTS}/{MODEL_FILE}')
 else:
     print('модель уже сохранена, переходим к сабмиту')
+    # выгрузка модели
     best_model = joblib.load(f'{PATH_TO_ARTEFACTS}/{MODEL_FILE}')
 
+# калибровка лучшей модели
 calibrated_clf = CalibratedClassifierCV(best_model, cv=StratifiedKFold(n_splits=5))
 calibrated_clf.fit(features_train, target_train)
 y_pred_proba = calibrated_clf.predict_proba(features_test)
 y_pred_proba = y_pred_proba[:, 1]
 
-# # обучаем лучшую модель
-# best_model.fit(features_train, target_train)
-# y_pred_proba = best_model.predict_proba(features_test)
-# y_pred_proba = y_pred_proba[:, 1]
-# print('лучшая модель обучена')
-#
 # выполняем submit
 submit_data = pd.DataFrame(data=y_pred_proba, columns=['Predicted'])
 submit_data.to_csv(f'{PATH_TO_PREPARED_DATA}/{SUBMIT_FILE}', index_label='Id', sep=",")

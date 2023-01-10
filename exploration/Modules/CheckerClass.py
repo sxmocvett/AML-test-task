@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from itertools import product
 import scipy.stats as ss
-from typing import List, Set, Dict, Tuple, Optional
+from typing import List, Dict
 
 class Checker:
     """

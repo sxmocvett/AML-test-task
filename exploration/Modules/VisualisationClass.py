@@ -3,7 +3,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import itertools
-from typing import List, Set, Dict, Tuple, Optional
+from typing import List
 from math import ceil
 from itertools import product
 
